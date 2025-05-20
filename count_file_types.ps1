@@ -30,8 +30,3 @@ Get-ChildItem -Path $path -Recurse -Force -File | ForEach-Object {
 
 Write-Output $counts
 Out-File -InputObject $counts -FilePath ".\file_counts.txt"
-
-foreach ($extensionType in $counts.Keys) {
-  $total = $counts[$extensionType]
-  Write-Output (100 / $total)
-}

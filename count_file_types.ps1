@@ -14,7 +14,7 @@ $extensionTypes = @{
 
 $counts = @{}
 
-Get-ChildItem -Path $path -Recurse -Force -File | ForEach-Object {
+Get-ChildItem -Path $path -Recurse -Force -File -ErrorAction SilentlyContinue | ForEach-Object {
     if ($_.PSIsContainer) { return } # Skip directories
     foreach ($folder in $foldersExcluded) {
         if ($_.DirectoryName.Contains($folder)) { return }

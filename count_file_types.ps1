@@ -4,21 +4,12 @@ param (
 
 $foldersExcluded = @("\AppData", "\ProgramFiles (x86)")
 
-$extensionTypes = @{
-    "Images" = @("jpg", "png", "bmp", "gif", "tiff")
-    "Documents" = @("docx", "doc", "txt", "pdf", "rtf")
-    "Spreadsheets" = @("xls", "xlsx")
-    "Audio" = @("mp3", "wav", "flac", "aac")
-    "Videos" = @("mp4", "avi", "mov", "wmv", "mkv")
-}
-
-$countByType = @{}
 $countByExtension = @{}
-$blah = @{}
+$countByPerceivedType = @{}
 
-$shell = New-Object -com shell.application
+$shell = New-Object -ComObject shell.application
 
-Get-ChildItem -Path $path -Recurse -Force -File -ErrorAction SilentlyContinue | ForEach-Object {
+Get-ChildItem -Path $path -Recurse -Force -File -ErrorAction "SilentlyContinue" | ForEach-Object {
     if ($_.PSIsContainer) { return } # Skip directories
     
     # The following skips excluded folders listed $folderExcluded
@@ -26,39 +17,27 @@ Get-ChildItem -Path $path -Recurse -Force -File -ErrorAction SilentlyContinue | 
         if ($_.DirectoryName.Contains($folder)) { return }
     }
 
-    $rootFolder = $shell.namespace($_.Directory.FullName)
-    $fileObj = $rootFolder.Items().Item($_.Name)
+    $ext = $_.Extension -replace "^\.","" # Remove the dot from extension
+    $countByExtension[$ext] = ($countByExtension[$ext] + 1)
+    
+    $folderObj = $shell.namespace($_.Directory.FullName)
+    $fileObj = $folderObj.Items().Item($_.Name)
     for ($i = 0; $i -le 294; $i++) {     #294 ...i don't know how high that should be to get all meta data
-        $name = $rootFolder.getDetailsOf($null, $i)
+        $name = $folderObj.getDetailsOf($null, $i)
         if ($name) {
-            $value = $rootFolder.getDetailsOf($fileObj, $i)
+			$value = $folderObj.getDetailsOf($fileObj, $i)
             if ($value) {
-                echo $name
                 if ($name -eq "Perceived type") {
-                    $blah[$value] = ($blah[$value] + 1)
+                    $countByPerceivedType[$value] = ($countByPerceivedType[$value] + 1)
                 }
                 Add-Member -InputObject $fileObj "NoteProperty" -Name $name -Value $value -Force
             }
         }
     }
-
-    #$ext = $_.Extension -replace "^\.","" # Remove the dot from extension
-    #foreach ($extensionType in $extensionTypes.Keys) {
-    #    $countByExtension[$ext] = ($countByExtension[$ext] + 1)
-    #    if ($ext -in $extensionTypes[$extensionType]) {
-    #        $countByType[$extensionType] = ($countByType[$extensionType] + 1)
-    #        #ii $_.FullName
-    #    }
-    #}
 }
 
-#Write-Output "`nBY TYPE:"
-#Write-Output $countByType | Format-Table 
-
 Write-Output "`nBY PERCEIVED TYPE:"
-Write-Output $blah | Format-Table 
+Write-Output $countByPerceivedType | Format-Table @{Label="Perceived Type"; Expression={$_.Name}}, @{Label="Count"; Expression={$_.Value}} -Autosize
 
-#Write-Output "`nBY EXTENSION:"
-#Write-Output $countByExtension | Format-Table
-
-#Out-File -InputObject $countByType -FilePath ".\file_counts.txt"
+Write-Output "`nBY EXTENSION:"
+Write-Output $countByExtension | Format-Table @{Label="Extension"; Expression={$_.Name}}, @{Label="Count"; Expression={$_.Value}} -Autosize
